@@ -571,6 +571,38 @@ header.nav{ position:fixed; top:0; left:0; right:0; z-index:100; background:rgba
       </div>
     </article>
 
+    <!-- EXHIBIT 5 -->
+    <article class="case rv">
+      <div class="case-grid">
+        <div class="case-desc">
+          <h3>Wind Tunnel Testing and Computational Aerodynamics</h3>
+          <div class="case-sub">AERO3260 Aerodynamics 1 — University of Sydney</div>
+          <p>Two connected pieces of work from Aerodynamics 1: a wind-tunnel investigation of a circular cylinder and a NACA 23012 aerofoil, and a computational coursework project building potential-flow, conformal-mapping and panel-method solvers from scratch. Together they cover the same aerodynamic problem, pressure distribution and lift/drag prediction, from the experimental and the theoretical side.</p>
+          <p>The lab report measured surface pressure, force coefficients and wake profiles in a low-speed wind tunnel, comparing pressure integration, a force balance and a wake rake against published data and an XFOIL simulation. The coursework built the theory behind those measurements from first principles: Rankine-body and Joukowsky conformal-mapping solutions with the Kutta condition, Glauert's thin-aerofoil theory, and a constant-strength source/vortex panel method implemented independently in Python and MATLAB and validated against XFOIL.</p>
+          <ul class="case-results">
+            <li><b>Cl 1.51</b> measured NACA 23012 lift peak at 16°, stalling between 16° and 18°</li>
+            <li><b>Cd 1.29</b> cylinder drag coefficient at Re = 3.0×10⁴, within 8% of published sub-critical data</li>
+            <li><b>0.3%</b> agreement between the from-scratch panel method and XFOIL at α = 10° on a NACA0021</li>
+          </ul>
+          <span class="small-h">Tools</span>
+          <div class="tools"><span class="tool">Wind tunnel testing</span><span class="tool">Conformal mapping</span><span class="tool">Panel methods</span><span class="tool">Python</span><span class="tool">MATLAB</span><span class="tool">XFOIL</span></div>
+        </div>
+
+        <div class="docviewer" data-docs='[{"label":"Lab Report 1 — Wind Tunnel","url":"AERO3260_LabReport1.pdf"},{"label":"Assignment 1 — Potential Flow & Panel Methods","url":"AERO3260_Assignment1.pdf"}]'>
+          <div class="dv-tabs"></div>
+          <div class="dv-canvas-wrap">
+            <button class="dv-nav dv-prev" aria-label="Previous page">‹</button>
+            <canvas></canvas>
+            <button class="dv-nav dv-next" aria-label="Next page">›</button>
+            <div class="dv-loading"><span>Loading document…</span></div>
+          </div>
+          <div class="dv-footer">
+            <span class="dv-page-indicator">Page — / —</span>
+            <a class="dv-open" href="#" target="_blank" rel="noopener">Open PDF ↗</a>
+          </div>
+        </div>
+      </div>
+    </article>
   </div>
 </section>
 
