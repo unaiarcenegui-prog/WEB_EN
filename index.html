@@ -274,6 +274,33 @@ header.nav{ position:fixed; top:0; left:0; right:0; z-index:100; background:rgba
 .rv{ opacity:0; transform:translateY(14px); transition:opacity .55s ease, transform .55s ease; }
 .rv.in{ opacity:1; transform:translateY(0); }
 
+
+/* ============================================================
+   10. SCROLL EXPERIENCE — hero pinned + zoom, sections slide over,
+   elements scale in as you scroll. Only runs when the visitor has
+   not asked for reduced motion. No content is changed.
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference){
+  .hero{ position:sticky; top:0; overflow:hidden; isolation:isolate; background-image:none; }
+  .hero::before{
+    content:""; position:absolute; inset:0; z-index:-2;
+    background:
+      linear-gradient(180deg, rgba(16,17,19,.45) 0%, rgba(16,17,19,.65) 55%, rgba(16,17,19,.95) 100%),
+      url('fotos/AvionPrincipal.jpeg') center 60% / cover no-repeat;
+    transform:scale(var(--hz,1)); transform-origin:50% 62%; will-change:transform;
+  }
+  .hero::after{ content:""; position:absolute; inset:0; z-index:-1; background:#101113; opacity:var(--hd,0); pointer-events:none; }
+  .hero .wrap{ transform:translate3d(0,var(--hy,0px),0) scale(var(--hs,1)); opacity:var(--ho,1); transform-origin:50% 35%; will-change:transform,opacity; }
+
+  section:not(.hero){ position:relative; z-index:1; }
+  #about, #work, #skills{ background:var(--paper); }
+  #about{ border-radius:34px 34px 0 0; box-shadow:0 -28px 80px rgba(0,0,0,.38); }
+
+  .route::after{ content:""; position:absolute; left:4px; top:6px; width:1px; background:var(--ink); height:calc((100% - 12px) * var(--fill,0)); }
+  .route-item::before{ transition:background .3s ease, transform .3s ease; }
+  .route-item.on::before{ background:var(--ink); transform:scale(1.25); }
+}
+
 </style>
 </head>
 <body>
@@ -977,6 +1004,115 @@ if (prefersReduced) {
 
     loadDoc(docs[0].url);
   }
+})();
+</script>
+
+
+<script>
+// ============================================================
+// Scroll experience (Apple-style): the hero stays pinned and zooms
+// while the next section slides over it; every block scales/fades in
+// as it enters; the route line draws itself. Values are smoothed so
+// motion stays fluid. Skipped entirely under prefers-reduced-motion.
+// ============================================================
+(function(){
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var hero = document.querySelector('.hero');
+  var about = document.getElementById('about');
+  if (!hero || !about) return;
+
+  var clamp = function(v){ return v < 0 ? 0 : v > 1 ? 1 : v; };
+  var items = [];
+  function add(el, kind, a, b, own){
+    el.style.transition = 'none';
+    items.push({ el:el, kind:kind, a:a, b:b, own:own, cur:0, top:0, h:0, applied:-1 });
+  }
+  document.querySelectorAll('.rv').forEach(function(el){
+    if (!el.closest('.hero')) add(el, 'rv', 0.94, 0.62, true);
+  });
+  document.querySelectorAll('#about .section-head h1, #nova .wrap > h1, #work .section-head h2, #beyond .section-head h2, #skills .section-head h2').forEach(function(el){
+    add(el, 'head', 0.98, 0.60, !el.closest('.rv'));
+  });
+  document.querySelectorAll('.docviewer, .p-slider').forEach(function(el){
+    add(el, 'zoom', 0.98, 0.52, false);
+  });
+
+  var route = document.querySelector('.route');
+  var rItems = route ? Array.prototype.map.call(route.querySelectorAll('.route-item'), function(el){ return { el:el, frac:0 }; }) : [];
+
+  var vh = 0, H = 0, pinStart = 0, span = 1, small = false, hCur = 0, first = true, raf = 0;
+
+  function measure(){
+    vh = window.innerHeight; small = window.innerWidth < 720;
+    H = hero.offsetHeight;
+    hero.style.top = Math.min(0, vh - H) + 'px';
+    pinStart = Math.max(0, H - vh);
+    span = Math.max(1, Math.min(vh, H));
+    var sy = window.scrollY || 0, saved = [];
+    items.forEach(function(it, i){ saved[i] = it.el.style.transform; it.el.style.transform = 'none'; });
+    items.forEach(function(it){ var r = it.el.getBoundingClientRect(); it.top = r.top + sy; it.h = r.height; });
+    items.forEach(function(it, i){ it.el.style.transform = saved[i]; });
+    if (route) rItems.forEach(function(ri){ ri.frac = (ri.el.offsetTop + 8) / Math.max(1, route.offsetHeight); });
+  }
+
+  function frame(){
+    var sy = window.scrollY || 0, moving = false, k = small ? 0.6 : 1;
+
+    // hero: zoom the photo, recede the text, then hand over to the next section
+    var hp = clamp((sy - pinStart) / span);
+    if (first) hCur = hp; else { hCur += (hp - hCur) * 0.18; if (Math.abs(hp - hCur) < 0.001) hCur = hp; else moving = true; }
+    hero.style.visibility = (hp >= 0.999 && hCur >= 0.999) ? 'hidden' : '';
+    hero.style.setProperty('--hz', (1 + 0.30 * k * hCur).toFixed(4));
+    hero.style.setProperty('--hd', (0.6 * hCur).toFixed(3));
+    hero.style.setProperty('--hs', (1 - 0.07 * k * hCur).toFixed(4));
+    hero.style.setProperty('--ho', clamp(1 - 1.3 * hCur).toFixed(3));
+    hero.style.setProperty('--hy', (-60 * hCur).toFixed(1) + 'px');
+
+    // blocks entering the viewport
+    for (var i = 0; i < items.length; i++){
+      var it = items[i], el = it.el;
+      var t = clamp((vh * it.a - (it.top - sy)) / (vh * (it.a - it.b)));
+      t = t * t * (3 - 2 * t);
+      if (first) it.cur = t; else { it.cur += (t - it.cur) * 0.16; if (Math.abs(t - it.cur) < 0.002) it.cur = t; else moving = true; }
+      if (Math.abs(it.cur - it.applied) < 0.0008) continue;
+      it.applied = it.cur;
+      var c = it.cur, done = c >= 0.999;
+      if (it.kind === 'rv'){
+        var tall = it.h > vh * 0.7;
+        var s = tall ? 1 : 1 - (1 - c) * (small ? 0.03 : 0.06);
+        el.style.opacity = done ? '1' : c.toFixed(3);
+        el.style.transform = done ? 'none' : 'translate3d(0,' + ((1 - c) * (tall ? 34 : 46)).toFixed(1) + 'px,0) scale(' + s.toFixed(4) + ')';
+      } else if (it.kind === 'head'){
+        el.style.transformOrigin = '0 60%';
+        el.style.transform = done ? 'none' : 'scale(' + (1 + (1 - c) * (small ? 0.06 : 0.14)).toFixed(4) + ')';
+        if (it.own) el.style.opacity = done ? '1' : (0.25 + 0.75 * c).toFixed(3);
+      } else {
+        el.style.transformOrigin = '50% 0';
+        el.style.transform = done ? 'none' : 'scale(' + (1 - (1 - c) * (small ? 0.04 : 0.09)).toFixed(4) + ')';
+      }
+    }
+
+    // international route: the line draws itself, dots fill in as it passes
+    if (route){
+      var rr = route.getBoundingClientRect();
+      var f = clamp((vh * 0.72 - rr.top) / (rr.height * 0.95));
+      route.style.setProperty('--fill', f.toFixed(3));
+      rItems.forEach(function(ri){ ri.el.classList.toggle('on', f >= ri.frac); });
+    }
+    return moving;
+  }
+
+  function tick(){ raf = 0; var m = frame(); first = false; if (m) raf = requestAnimationFrame(tick); }
+  function kick(){ if (!raf) raf = requestAnimationFrame(tick); }
+
+  window.addEventListener('scroll', kick, { passive:true });
+  window.addEventListener('resize', function(){ measure(); kick(); });
+  window.addEventListener('load', function(){ measure(); first = true; kick(); });
+  if ('ResizeObserver' in window){
+    var rt;
+    new ResizeObserver(function(){ clearTimeout(rt); rt = setTimeout(function(){ measure(); kick(); }, 120); }).observe(document.body);
+  }
+  measure(); kick();
 })();
 </script>
 
